@@ -152,13 +152,6 @@ enum MilestoneStatus {
   DELAYED
 }
 
-enum DisputeStatus {
-  OPEN
-  UNDER_REVIEW
-  RESOLVED
-  CANCELLED
-}
-
 // User model
 model User {
   id                       String    @id @default(uuid())
@@ -230,6 +223,7 @@ model User {
   digestPreference        DigestPreference?
   createdTaxStrategies    TransactionTaxStrategy[] @relation("CreatedTransactionTaxStrategies")
   transactionHistory      TransactionHistory[]
+  favorites               PropertyFavorite[]
 
   @@index([email])
   @@index([role])
@@ -407,10 +401,11 @@ model Property {
   updatedAt    DateTime       @updatedAt @map("updated_at")
 
   // Relations
-  owner        User          @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  owner        User               @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   transactions Transaction[]
   documents    Document[]
   fraudAlerts  FraudAlert[]
+  favorites    PropertyFavorite[]
 
   @@index([ownerId])
   @@index([status])
@@ -418,6 +413,22 @@ model Property {
   @@index([price])
   @@index([propertyType])
   @@map("properties")
+}
+
+// Property Favorites — users save properties for later (#TASK1)
+model PropertyFavorite {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  propertyId String   @map("property_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, propertyId])
+  @@index([userId, createdAt])
+  @@index([propertyId])
+  @@map("property_favorites")
 }
 
 // Transaction model

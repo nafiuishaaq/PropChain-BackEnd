@@ -395,6 +395,7 @@ model Property {
   yearBuilt    Int?           @map("year_built")
   status       PropertyStatus @default(DRAFT)
   ownerId      String         @map("owner_id")
+  neighborhoodId String?      @map("neighborhood_id")
   latitude     Float?
   longitude    Float?
   features     String[] // Array of features (pool, garage, etc.)
@@ -409,6 +410,7 @@ model Property {
   fraudAlerts  FraudAlert[]
   favorites    PropertyFavorite[]
   views        PropertyView[]
+  neighborhood Neighborhood?      @relation(fields: [neighborhoodId], references: [id], onDelete: SetNull)
 
   @@index([ownerId])
   @@index([status])
@@ -416,6 +418,7 @@ model Property {
   @@index([price])
   @@index([propertyType])
   @@index([viewCount])
+  @@index([neighborhoodId])
   @@map("properties")
 }
 
@@ -453,6 +456,69 @@ model PropertyView {
   @@index([userId])
   @@index([ipAddress])
   @@map("property_views")
+}
+
+// Neighborhood data — walk score, crime stats, schools, amenities (#TASK4)
+model Neighborhood {
+  id           String   @id @default(uuid())
+  name         String
+  city         String
+  state        String
+  country      String   @default("USA")
+  walkScore    Int?     @map("walk_score")
+  transitScore Int?     @map("transit_score")
+  bikeScore    Int?     @map("bike_score")
+  crimeIndex   Float?   @map("crime_index")
+  crimeRate    Json?    @map("crime_rate")
+  schoolRating Float?   @map("school_rating")
+  description  String?  @db.Text
+  metadata     Json?
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  properties Property[]
+  schools    NeighborhoodSchool[]
+  amenities  NeighborhoodAmenity[]
+
+  @@unique([name, city, state])
+  @@index([city, state])
+  @@map("neighborhoods")
+}
+
+model NeighborhoodSchool {
+  id                  String   @id @default(uuid())
+  neighborhoodId      String   @map("neighborhood_id")
+  name                String
+  type                String
+  rating              Float
+  distanceMiles       Float?   @map("distance_miles")
+  studentTeacherRatio Float?   @map("student_teacher_ratio")
+  enrollmentCount     Int?     @map("enrollment_count")
+  url                 String?
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  neighborhood Neighborhood @relation(fields: [neighborhoodId], references: [id], onDelete: Cascade)
+
+  @@index([neighborhoodId])
+  @@index([type])
+  @@map("neighborhood_schools")
+}
+
+model NeighborhoodAmenity {
+  id             String   @id @default(uuid())
+  neighborhoodId String   @map("neighborhood_id")
+  category       String
+  name           String
+  distanceMiles  Float?   @map("distance_miles")
+  rating         Float?
+  address        String?
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  neighborhood Neighborhood @relation(fields: [neighborhoodId], references: [id], onDelete: Cascade)
+
+  @@index([neighborhoodId])
+  @@index([category])
+  @@map("neighborhood_amenities")
 }
 
 // Transaction model

@@ -313,6 +313,39 @@ export class TransactionsService {
   }
 
   /**
+   * Update transaction status
+   */
+  async updateTransactionStatus(
+    transactionId: string,
+    status: string,
+    actorId?: string,
+  ): Promise<TransactionResponseDto> {
+    try {
+      const transaction = await this.prisma.transaction.findUnique({
+        where: { id: transactionId },
+      });
+
+      if (!transaction) {
+        throw new NotFoundException('Transaction not found');
+      }
+
+      const updated = await this.prisma.transaction.update({
+        where: { id: transactionId },
+        data: { status: status as any },
+      });
+
+      this.logger.log(`Transaction ${transactionId} status updated to ${status}`);
+      return this.toResponseDto(updated);
+    } catch (error) {
+      this.logger.error(
+        `Failed to update transaction status: ${error.message}`,
+        error.stack,
+      );
+      throw error;
+    }
+  }
+
+  /**
    * Convert transaction to response DTO
    */
   private toResponseDto(transaction: any): TransactionResponseDto {

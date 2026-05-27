@@ -1,14 +1,23 @@
 import { Module } from '@nestjs/common';
-import { PropertiesController } from './properties.controller';
 import { PropertiesService } from './properties.service';
-import { PrismaModule } from '../database/prisma/prisma.module';
-import { ValuationModule } from '../valuation/valuation.module';
-import { PropertySearchService } from './search/property-search.service';
+import { PropertiesController } from './properties.controller';
+import { PrismaModule } from '../database/prisma.module';
+import { AuthModule } from '../auth/auth.module';
+import { PropertiesResolver } from './properties.resolver';
+import { PubSub } from 'graphql-subscriptions';
+import { FraudModule } from '../fraud/fraud.module';
 
 @Module({
-  imports: [PrismaModule, ValuationModule],
+  imports: [PrismaModule, AuthModule, FraudModule],
   controllers: [PropertiesController],
-  providers: [PropertiesService, PropertySearchService],
+  providers: [
+    PropertiesService,
+    PropertiesResolver,
+    {
+      provide: 'PUB_SUB',
+      useValue: new PubSub(),
+    },
+  ],
   exports: [PropertiesService],
 })
 export class PropertiesModule {}

@@ -4,36 +4,7 @@
   "sourceRoot": "src",
   "compilerOptions": {
     "deleteOutDir": true,
-    "watchAssets": true,
-    "assets": ["**/*.json", "**/*.proto", "**/*.hbs"],
-    "plugins": [
-      {
-        "name": "@nestjs/swagger",
-        "options": {
-          "classValidatorShim": true,
-          "introspectComments": true
-        }
-      }
-    ]
-  },
-  "projects": {
-    "app": {
-      "type": "application",
-      "root": "src",
-      "entryFile": "main",
-      "sourceRoot": "src",
-      "compilerOptions": {
-        "tsConfigPath": "tsconfig.app.json"
-      }
-    },
-    "test": {
-      "type": "library",
-      "root": "test",
-      "entryFile": "index",
-      "sourceRoot": "test",
-      "compilerOptions": {
-        "tsConfigPath": "tsconfig.spec.json"
-      }
-    }
+    "assets": ["email/templates/**/*"],
+    "watchAssets": true
   }
 }

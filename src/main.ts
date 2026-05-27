@@ -1,132 +1,66 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
-import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
-import { ConfigService } from '@nestjs/config';
-import helmet from 'helmet';
-import * as compression from 'compression';
+import { Logger, ValidationPipe } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { StructuredLoggerService } from './common/logging/logger.service';
-import { ErrorResponseDto } from './common/errors/error.dto';
-import { SecurityHeadersService } from './security/services/security-headers.service';
+import { VersionHeaderInterceptor } from './versioning/version-header.interceptor';
+import { DeprecationWarningInterceptor } from './versioning/deprecation-warning.interceptor';
+import { CacheMetricsInterceptor } from './cache/cache-metrics.interceptor';
+import { CacheMonitoringService } from './cache/cache-monitoring.service';
+import { RateLimitGuard } from './auth/guards/rate-limit.guard';
+import { RateLimitService } from './auth/rate-limit.service';
+import { RateLimitHeadersInterceptor } from './auth/interceptors/rate-limit-headers.interceptor';
+import { setupSwagger } from './config/swagger.config';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, {
-    bufferLogs: true,
-  });
+  const app = await NestFactory.create(AppModule);
+  const logger = new Logger('Bootstrap');
 
-  const configService = app.get(ConfigService);
-  const logger = await app.resolve(StructuredLoggerService);
-  app.useLogger(logger);
-
-  // Security middleware
-  app.use(helmet());
-  app.use(compression());
-
-  // Enhanced security headers - CSP, HSTS, and other security headers
-  const securityHeadersService = app.get(SecurityHeadersService);
-  const isProduction = configService.get('NODE_ENV') === 'production';
-
-  // Get environment-specific security headers configuration
-  const securityConfig = isProduction
-    ? undefined // Use default production config
-    : securityHeadersService.getDevelopmentConfig();
-
-  // Validate configuration in production
-  if (isProduction) {
-    const configErrors = securityHeadersService.validateConfig(securityHeadersService['defaultConfig']);
-    if (configErrors.length > 0) {
-      logger.warn(`Security configuration warnings: ${configErrors.join(', ')}`);
-    }
-  }
-
-  // Apply security headers middleware
-  const securityHeaders = securityHeadersService.getSecurityHeaders(securityConfig);
-  app.use((req: any, res: any, next: () => void) => {
-    Object.entries(securityHeaders).forEach(([key, value]) => {
-      res.setHeader(key, value);
-    });
-    next();
-  });
-
-  logger.log(`Security headers configured: ${Object.keys(securityHeaders).length} headers applied`);
-
-  // CORS configuration
-  app.enableCors({
-    origin: configService.get('CORS_ORIGIN', '*'),
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'x-correlation-id'],
-  });
-
-  // Global pipes
+  // Enable validation
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
       forbidNonWhitelisted: true,
       transform: true,
-      transformOptions: {
-        enableImplicitConversion: true,
-      },
     }),
   );
 
-  // API prefix
-  const apiPrefix = configService.get('API_PREFIX', 'api');
-  app.setGlobalPrefix(apiPrefix);
+  // Enable CORS
+  app.enableCors();
 
-  // Swagger documentation
-  if (configService.get('SWAGGER_ENABLED', true)) {
-    const config = new DocumentBuilder()
-      .setTitle('PropChain API')
-      .setDescription('Decentralized Real Estate Infrastructure - Backend API')
-      .setVersion('1.0.0')
-      .addTag('properties')
-      .addTag('transactions')
-      .addTag('users')
-      .addTag('blockchain')
-      .addBearerAuth()
-      .addApiKey({ type: 'apiKey', name: 'X-API-KEY', in: 'header' }, 'apiKey')
-      .build();
+  // Global prefix
+  app.setGlobalPrefix('api');
 
-    const document = SwaggerModule.createDocument(app, config, {
-      extraModels: [ErrorResponseDto],
-    });
-    SwaggerModule.setup(`${apiPrefix}/docs`, app, document, {
-      customSiteTitle: 'PropChain API Documentation',
-      customCss: '.swagger-ui .topbar { display: none }',
-      customfavIcon: '/favicon.ico',
-    });
+  // Get services for guard initialization
+  const reflector = app.get(Reflector);
+  const rateLimitService = app.get(RateLimitService);
 
-    logger.log(`Swagger documentation available at /${apiPrefix}/docs`);
-  }
+  // Apply global guards
+  app.useGlobalGuards(new RateLimitGuard(reflector, rateLimitService));
 
-  const port = configService.get<number>('PORT', 3000);
-  const host = configService.get<string>('HOST', '0.0.0.0');
+  // Apply version header interceptor globally
+  app.useGlobalInterceptors(new VersionHeaderInterceptor());
 
-  await app.listen(port, host);
+  // Apply deprecation warning interceptor
+  app.useGlobalInterceptors(new DeprecationWarningInterceptor(reflector));
 
-  logger.log(`🚀 PropChain Backend is running on: http://${host}:${port}/${apiPrefix}`);
-  logger.log(`🏠 Environment: ${configService.get('NODE_ENV', 'development')}`);
-  logger.log(`📊 Health check: http://${host}:${port}/${apiPrefix}/health`);
+  // Apply rate limit headers interceptor
+  app.useGlobalInterceptors(new RateLimitHeadersInterceptor());
 
-  // Graceful shutdown
-  process.on('SIGTERM', async () => {
-    logger.log('SIGTERM signal received: closing HTTP server');
-    await app.close();
-    process.exit(0);
-  });
+  // Apply cache metrics interceptor
+  const cacheMonitoringService = app.get(CacheMonitoringService);
+  app.useGlobalInterceptors(new CacheMetricsInterceptor(cacheMonitoringService));
 
-  process.on('SIGINT', async () => {
-    logger.log('SIGINT signal received: closing HTTP server');
-    await app.close();
-    process.exit(0);
-  });
+  // Setup Swagger documentation
+  setupSwagger(app);
+
+  const port = process.env.PORT || 3000;
+  await app.listen(port);
+  logger.log(`PropChain API running on http://localhost:${port}`);
+  logger.log(`API Versioning enabled. Supported versions: v1, v2`);
+  logger.log(`📚 Swagger UI available at http://localhost:${port}/api/docs`);
+  logger.log(`📋 OpenAPI spec available at http://localhost:${port}/api/openapi.json`);
+  logger.log(`💾 Redis Caching enabled`);
+  logger.log(`🛡️ Rate Limiting enabled (per-user, per-endpoint, IP-based)`);
 }
 
-bootstrap().catch(async error => {
-  // Use a temporary logger since the app hasn't started
-  const tempLogger = new (await import('./common/logging/logger.service')).StructuredLoggerService(null);
-  tempLogger.setContext('Main');
-  tempLogger.error('Failed to start application:', error.stack, {});
-  process.exit(1);
-});
+bootstrap();

@@ -1,18 +1,22 @@
-import { Module, forwardRef } from '@nestjs/common';
-import { UserService } from './user.service';
-import { UserController } from './user.controller';
-import { PrismaService } from '../database/prisma/prisma.service';
-import { AuthModule } from '../auth/auth.module';
-import { PasswordValidator } from '../common/validators/password.validator';
-import { PasswordRotationService } from '../common/services/password-rotation.service';
+import { Module } from '@nestjs/common';
+import { UsersService } from './users.service';
+import { UsersController } from './users.controller';
+import { UserPreferencesService } from './user-preferences.service';
+import { UserPreferencesController } from './user-preferences.controller';
+import { ActivityLogService } from './activity-log.service';
+import { ActivityLogController, AdminActivityLogController } from './activity-log.controller';
+import { PrismaModule } from '../database/prisma.module';
+import { UsersResolver } from './users.resolver';
 
 @Module({
-  imports: [
-    // FIX: Using forwardRef to allow AuthModule and UsersModule to depend on each other
-    forwardRef(() => AuthModule),
+  imports: [PrismaModule],
+  controllers: [
+    UsersController,
+    UserPreferencesController,
+    ActivityLogController,
+    AdminActivityLogController,
   ],
-  controllers: [UserController],
-  providers: [UserService, PrismaService, PasswordValidator, PasswordRotationService],
-  exports: [UserService, PasswordRotationService], // Export for use in other modules
+  providers: [UsersService, UserPreferencesService, ActivityLogService, UsersResolver],
+  exports: [UsersService, UserPreferencesService, ActivityLogService],
 })
 export class UsersModule {}

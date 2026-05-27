@@ -1,187 +1,135 @@
-// Prisma model interfaces (will be replaced with actual Prisma types when available)
-export interface PrismaUser {
+// Temporary Prisma types to work around generation issues
+export interface User {
   id: string;
   email: string;
-  walletAddress?: string | null;
+  password: string;
+  firstName: string | null;
+  lastName: string | null;
+  phone: string | null;
   role: string;
-  roleId?: string | null;
-  password?: string | null;
   isVerified: boolean;
+  isBlocked: boolean;
+  isDeactivated: boolean;
+  deactivatedAt: Date | null;
+  scheduledDeletionAt: Date | null;
+  twoFactorEnabled: boolean;
+  twoFactorSecret: string | null;
+  twoFactorBackupCodes: string[];
+  avatar: string | null;
+  pendingEmail: string | null;
+  emailVerificationToken: string | null;
+  emailVerificationExpires: Date | null;
+  trustScore: number;
+  lastTrustScoreUpdate: Date | null;
   createdAt: Date;
   updatedAt: Date;
+  lastActivityAt: Date | null;
+  preferredChannel: string | null;
+  languagePreference: string | null;
+  timezone: string | null;
+  contactHours: any | null; // JsonValue
+  referralCode: string | null;
+  referredById: string | null;
 }
 
-export interface PrismaProperty {
+export interface ApiKey {
   id: string;
-  title: string;
-  description?: string | null;
-  location: string;
-  price: any; // Will be Decimal when Prisma is available
-  status: string;
-  ownerId: string;
-  createdAt: Date;
-  updatedAt: Date;
-  // Valuation fields
-  estimatedValue?: any | null;
-  valuationDate?: Date | null;
-  valuationConfidence?: number | null;
-  valuationSource?: string | null;
-  lastValuationId?: string | null;
-  // Property features
-  bedrooms?: number | null;
-  bathrooms?: number | null;
-  squareFootage?: any | null;
-  yearBuilt?: number | null;
-  propertyType?: string | null;
-  lotSize?: any | null;
-}
-
-export interface PrismaPropertyValuation {
-  id: string;
-  propertyId: string;
-  estimatedValue: any; // Will be Decimal when Prisma is available
-  confidenceScore: number;
-  valuationDate: Date;
-  source: string;
-  marketTrend?: string | null;
-  featuresUsed?: any | null; // Will be Json when Prisma is available
-  rawData?: any | null; // Will be Json when Prisma is available
-  createdAt: Date;
-}
-
-export interface PrismaTransaction {
-  id: string;
-  fromAddress: string;
-  toAddress: string;
-  amount: any; // Will be Decimal when Prisma is available
-  txHash?: string | null;
-  status: string;
-  type: string;
-  propertyId?: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface PrismaRole {
-  id: string;
+  userId: string;
   name: string;
-  description?: string | null;
-  level: number;
-  isSystem: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface PrismaPermission {
-  id: string;
-  resource: string;
-  action: string;
-  description?: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface PrismaDocument {
-  id: string;
-  name: string;
-  type: string;
-  status: string;
-  fileUrl: string;
-  fileHash?: string | null;
-  mimeType?: string | null;
-  fileSize?: number | null;
-  description?: string | null;
-  propertyId?: string | null;
-  transactionId?: string | null;
-  uploadedById: string;
-  verifiedAt?: Date | null;
-  expiresAt?: Date | null;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface PrismaApiKey {
-  id: string;
-  name: string;
-  key: string;
   keyPrefix: string;
-  scopes: string[];
-  requestCount: bigint;
-  lastUsedAt?: Date | null;
-  isActive: boolean;
-  rateLimit?: number | null;
+  keyHash: string;
+  permissions: string[];
+  usageCount: number;
+  lastUsedAt: Date | null;
+  expiresAt: Date | null;
+  revokedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
 
-// Prisma model types with relations
-export type UserWithRelations = PrismaUser & {
-  properties: PrismaProperty[];
-  receivedTransactions: PrismaTransaction[];
-  userRole: PrismaRole | null;
-  roleChanges: any[];
-  documents: PrismaDocument[];
-};
-
-export type PropertyWithRelations = PrismaProperty & {
-  owner: PrismaUser;
-  transactions: PrismaTransaction[];
-  valuations: PrismaPropertyValuation[];
-  documents: PrismaDocument[];
-};
-
-export type PropertyValuationWithRelations = PrismaPropertyValuation & {
-  property: PrismaProperty;
-};
-
-export type TransactionWithRelations = PrismaTransaction & {
-  property: PrismaProperty | null;
-  recipient: PrismaUser | null;
-  documents: PrismaDocument[];
-};
-
-export type DocumentWithRelations = PrismaDocument & {
-  property: PrismaProperty | null;
-  transaction: PrismaTransaction | null;
-  uploadedBy: PrismaUser;
-};
-
-export type RoleWithRelations = PrismaRole & {
-  users: PrismaUser[];
-  permissions: (RolePermission & { permission: PrismaPermission })[];
-  roleChangeLogs: any[];
-};
-
-export type RolePermission = {
+export interface TransactionHistory {
   id: string;
-  roleId: string;
-  permissionId: string;
+  transactionId: string;
+  status: string;
+  actorId: string | null;
+  notes: string | null;
+  metadata: any | null;
   createdAt: Date;
-  role: PrismaRole;
-  permission: PrismaPermission;
-};
+}
 
-export type ApiKeyWithUsage = PrismaApiKey & {
-  usageCount: number;
-  lastUsedFormatted: string;
-};
+export enum TokenType {
+  ACCESS = 'ACCESS',
+  REFRESH = 'REFRESH',
+}
 
-// Prisma query result types
-export type PropertyListResult = {
-  properties: PropertyWithRelations[];
-  totalCount: number;
-  hasNextPage: boolean;
-  hasPreviousPage: boolean;
-};
+export enum UserRole {
+  USER = 'USER',
+  ADMIN = 'ADMIN',
+  AGENT = 'AGENT',
+}
 
-export type ValuationHistoryResult = {
-  valuations: PropertyValuationWithRelations[];
-  averageValue: number;
-  trend: 'up' | 'down' | 'stable';
-};
+export enum PropertyStatus {
+  DRAFT = 'DRAFT',
+  PENDING = 'PENDING',
+  ACTIVE = 'ACTIVE',
+  UNDER_CONTRACT = 'UNDER_CONTRACT',
+  SOLD = 'SOLD',
+  RENTED = 'RENTED',
+  ARCHIVED = 'ARCHIVED',
+}
 
-export type DocumentListResult = {
-  documents: DocumentWithRelations[];
-  totalCount: number;
-  hasNextPage: boolean;
-};
+export enum TransactionType {
+  SALE = 'SALE',
+  PURCHASE = 'PURCHASE',
+  TRANSFER = 'TRANSFER',
+}
+
+export enum TransactionStatus {
+  PENDING = 'PENDING',
+  COMPLETED = 'COMPLETED',
+  CANCELLED = 'CANCELLED',
+}
+
+export enum FraudSeverity {
+  LOW = 'LOW',
+  MEDIUM = 'MEDIUM',
+  HIGH = 'HIGH',
+  CRITICAL = 'CRITICAL',
+}
+
+export enum FraudStatus {
+  OPEN = 'OPEN',
+  INVESTIGATING = 'INVESTIGATING',
+  RESOLVED = 'RESOLVED',
+  DISMISSED = 'DISMISSED',
+}
+
+export enum FraudPattern {
+  EXCESSIVE_FAILED_LOGINS = 'EXCESSIVE_FAILED_LOGINS',
+  SHARED_IP_MULTIPLE_ACCOUNTS = 'SHARED_IP_MULTIPLE_ACCOUNTS',
+  MULTIPLE_IPS_FOR_ACCOUNT = 'MULTIPLE_IPS_FOR_ACCOUNT',
+  NEW_DEVICE_LOGIN = 'NEW_DEVICE_LOGIN',
+  TOKEN_REUSE = 'TOKEN_REUSE',
+  RAPID_PROPERTY_LISTINGS = 'RAPID_PROPERTY_LISTINGS',
+  DUPLICATE_PROPERTY_ADDRESS = 'DUPLICATE_PROPERTY_ADDRESS',
+  HIGH_VALUE_NEW_ACCOUNT_LISTING = 'HIGH_VALUE_NEW_ACCOUNT_LISTING',
+}
+
+export enum DisputeStatus {
+  OPEN = 'OPEN',
+  UNDER_REVIEW = 'UNDER_REVIEW',
+  RESOLVED = 'RESOLVED',
+  CANCELLED = 'CANCELLED',
+}
+
+export enum MilestoneStatus {
+  PENDING = 'PENDING',
+  COMPLETED = 'COMPLETED',
+  DELAYED = 'DELAYED',
+}
+
+export namespace Prisma {
+  export interface PropertyWhereInput extends Record<string, any> {}
+  export interface PropertyOrderByWithRelationInput extends Record<string, any> {}
+  export interface TransactionClient extends Record<string, any> {}
+}

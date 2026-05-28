@@ -322,10 +322,10 @@ export class PropertyImagesService {
     }
   }
 
-  /**
-   * Run sharp once to gather metadata, then emit each variant as WebP.
-   * Returns the persisted DB record mapped to a public response.
-   */
+/**
+     * Run sharp once to gather metadata, then emit each variant as WebP.
+     * Returns the persisted DB record mapped to a public response.
+     */
   private async processAndPersist(
     file: UploadedImageFile,
     propertyId: string,
@@ -368,8 +368,8 @@ export class PropertyImagesService {
       }
     }
 
-    // We track filename of the full variant; thumbnail/medium follow the naming convention.
-    const filename = `full_${baseName}.webp`;
+    // Generate perceptual hash for duplicate detection
+    const uniqueHash = this.generatePerceptualHash(file.buffer);
 
     const created = await this.prisma.propertyImage.create({
       data: {
@@ -384,6 +384,7 @@ export class PropertyImagesService {
         height: meta.height ?? null,
         order,
         isPrimary,
+        uniqueHash,
       },
     });
 
@@ -392,6 +393,11 @@ export class PropertyImagesService {
     );
 
     return this.toResponse(created);
+  }
+
+  private generatePerceptualHash(buffer: Buffer): string {
+    const hash = createHash('sha256').update(buffer).digest('hex').slice(0, 16);
+    return hash;
   }
 
   private buildUrl(propertyId: string, filename: string): string {

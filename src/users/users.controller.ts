@@ -30,6 +30,7 @@ import {
   SearchUsersDto,
   UpdatePreferencesDto,
   UpdateUserDto,
+  UpdateUserProfileDto,
 } from './dto/user.dto';
 import { DeactivateAccountDto, ReactivateAccountDto } from './dto/deactivation.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';

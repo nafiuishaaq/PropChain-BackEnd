@@ -412,6 +412,9 @@ model Property {
   documents    Document[]
   images       PropertyImage[]
   fraudAlerts  FraudAlert[]
+  duplicates   PropertyDuplicate[] @relation("DuplicateProperty")
+  duplicateOf  PropertyDuplicate[] @relation("DuplicateTarget")
+  mergedInto   PropertyDuplicate[] @relation("MergedProperty")
   favorites    PropertyFavorite[]
   views        PropertyView[]
   neighborhood Neighborhood?      @relation(fields: [neighborhoodId], references: [id], onDelete: SetNull)

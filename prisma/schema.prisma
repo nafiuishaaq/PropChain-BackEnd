@@ -465,6 +465,8 @@ model PropertyImage {
   order        Int      @default(0)
   isPrimary    Boolean  @default(false) @map("is_primary")
   uniqueHash   String?  @map("unique_hash") // Perceptual hash for duplicate detection
+  altText      String?  @map("alt_text")
+  caption      String?
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 

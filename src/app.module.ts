@@ -74,7 +74,7 @@ import { OpenHouseModule } from './open-house/open-house.module';
     FavoritesModule,
     PropertyViewsModule,
     PropertyComparisonModule,
-    NeighborhoodsModule,
+    // NeighborhoodsModule,
     OpenHouseModule,
   ],
 

@@ -325,29 +325,65 @@ export class PropertiesService {
 
     const page = dto.page && dto.page > 0 ? dto.page : 1;
     const limit = dto.limit && dto.limit > 0 ? dto.limit : 20;
-    const skip = (page - 1) * limit;
     const sortBy = dto.sortBy ?? 'createdAt';
     const sortOrder = dto.sortOrder ?? 'desc';
 
-    const [items, total] = await this.prisma.$transaction([
+    const hasTrustScoreFilter =
+      dto.minNeighborhoodTrustScore !== undefined || dto.maxNeighborhoodTrustScore !== undefined;
+
+    if (hasTrustScoreFilter) {
+      // Fetch all matching properties with neighborhood to filter by trust score in-memory
+      const allItems = await this.prisma.property.findMany({
+        where,
+        orderBy: { [sortBy]: sortOrder },
+        include: {
+          owner: { select: { id: true, firstName: true, lastName: true, email: true } },
+          neighborhood: true,
+        },
+      });
+
+      const annotated = allItems.map((p: any) => ({
+        ...p,
+        neighborhoodTrustScore: p.neighborhood
+          ? this.computeNeighborhoodTrustScore(p.neighborhood)
+          : null,
+      }));
+
+      const filtered = annotated.filter((p: any) => {
+        const score = p.neighborhoodTrustScore;
+        if (dto.minNeighborhoodTrustScore !== undefined && (score === null || score < dto.minNeighborhoodTrustScore)) return false;
+        if (dto.maxNeighborhoodTrustScore !== undefined && (score === null || score > dto.maxNeighborhoodTrustScore)) return false;
+        return true;
+      });
+
+      const total = filtered.length;
+      const skip = (page - 1) * limit;
+      const items = filtered.slice(skip, skip + limit);
+
+      return { items, total, page, limit, totalPages: limit > 0 ? Math.ceil(total / limit) : 0 };
+    }
+
+    const skip = (page - 1) * limit;
+    const [rawItems, total] = await this.prisma.$transaction([
       this.prisma.property.findMany({
         where,
         skip,
         take: limit,
         orderBy: { [sortBy]: sortOrder },
         include: {
-          owner: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              email: true,
-            },
-          },
+          owner: { select: { id: true, firstName: true, lastName: true, email: true } },
+          neighborhood: true,
         },
       }),
       this.prisma.property.count({ where }),
     ]);
+
+    const items = (rawItems as any[]).map((p) => ({
+      ...p,
+      neighborhoodTrustScore: p.neighborhood
+        ? this.computeNeighborhoodTrustScore(p.neighborhood)
+        : null,
+    }));
 
     return {
       items,
@@ -356,6 +392,17 @@ export class PropertiesService {
       limit,
       totalPages: limit > 0 ? Math.ceil(total / limit) : 0,
     };
+  }
+
+  computeNeighborhoodTrustScore(neighborhood: any): number {
+    const scores: number[] = [];
+    if (neighborhood.walkScore != null) scores.push(neighborhood.walkScore);
+    if (neighborhood.transitScore != null) scores.push(neighborhood.transitScore);
+    if (neighborhood.bikeScore != null) scores.push(neighborhood.bikeScore);
+    if (neighborhood.schoolRating != null) scores.push(neighborhood.schoolRating * 10);
+    if (neighborhood.crimeIndex != null) scores.push(100 - neighborhood.crimeIndex);
+    if (scores.length === 0) return 50;
+    return Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
   }
 
   /**
@@ -433,6 +480,14 @@ export class PropertiesService {
     // Optional status filter
     if (dto.status) {
       where.status = dto.status;
+    }
+
+    // Year built filter (#555)
+    if (dto.minYearBuilt !== undefined || dto.maxYearBuilt !== undefined) {
+      const yearFilter: Record<string, number> = {};
+      if (dto.minYearBuilt !== undefined) yearFilter.gte = dto.minYearBuilt;
+      if (dto.maxYearBuilt !== undefined) yearFilter.lte = dto.maxYearBuilt;
+      where.yearBuilt = yearFilter;
     }
 
     return where;

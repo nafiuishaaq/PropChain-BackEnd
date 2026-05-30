@@ -329,6 +329,8 @@ export class PropertyImagesService {
     propertyDir: string,
     order: number,
     isPrimary: boolean,
+    altText?: string,
+    caption?: string,
   ): Promise<PropertyImageResponse> {
     const baseName = `${Date.now()}_${randomBytes(6).toString('hex')}`;
 
@@ -381,7 +383,9 @@ export class PropertyImagesService {
         order,
         isPrimary,
         uniqueHash,
-      },
+        altText: altText ?? null,
+        caption: caption ?? null,
+      } as any,
     });
 
     this.logger.log(
@@ -431,6 +435,8 @@ export class PropertyImagesService {
       height: img.height ?? null,
       order: img.order,
       isPrimary: img.isPrimary,
+      altText: img.altText ?? null,
+      caption: img.caption ?? null,
       createdAt: img.createdAt,
       updatedAt: img.updatedAt,
     };

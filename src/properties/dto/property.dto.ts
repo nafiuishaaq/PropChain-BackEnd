@@ -1,4 +1,4 @@
-import { IsString, IsNumber, IsOptional, IsArray, IsIn, IsUrl } from 'class-validator';
+import { IsString, IsNumber, IsOptional, IsArray, IsIn, IsUrl, Type } from 'class-validator';
 import { InputType, Field, Float } from '@nestjs/graphql';
 
 export const PROPERTY_STATUS_ENUM = [
@@ -9,6 +9,7 @@ export const PROPERTY_STATUS_ENUM = [
   'SOLD',
   'RENTED',
   'ARCHIVED',
+  'EXPIRED',
 ] as const;
 
 @InputType()
@@ -129,12 +130,16 @@ export class CreatePropertyDto {
   @IsString({ each: true })
   hoaAmenities?: string[];
 
-  @Field({ nullable: true })
-  @IsOptional()
-  @IsString()
-  hoaContactInfo?: string;
-}
+   @Field({ nullable: true })
+   @IsOptional()
+   @IsString()
+   hoaContactInfo?: string;
 
+   @Field(() => Date, { nullable: true })
+   @IsOptional()
+   @Type(() => Date)
+   expiryDate?: Date;
+}
 import { PropertyStatus } from '../../common/common.types';
 
 @InputType()
@@ -209,16 +214,21 @@ export class UpdatePropertyDto {
   @IsNumber()
   yearBuilt?: number;
 
-  @Field(() => PropertyStatus, { nullable: true })
-  @IsOptional()
-  @IsIn(PROPERTY_STATUS_ENUM)
-  status?: PropertyStatus;
+   @Field(() => PropertyStatus, { nullable: true })
+   @IsOptional()
+   @IsIn(PROPERTY_STATUS_ENUM)
+   status?: PropertyStatus;
 
-  @Field(() => [String], { nullable: true })
-  @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  features?: string[];
+   @Field(() => [String], { nullable: true })
+   @IsOptional()
+   @IsArray()
+   @IsString({ each: true })
+   features?: string[];
+
+   @Field(() => Date, { nullable: true })
+   @IsOptional()
+   @Type(() => Date)
+   expiryDate?: Date;
 
   @Field({ nullable: true })
   @IsOptional()
@@ -267,8 +277,13 @@ export class UpdatePropertyDto {
   @IsString({ each: true })
   hoaAmenities?: string[];
 
-  @Field({ nullable: true })
-  @IsOptional()
-  @IsString()
-  hoaContactInfo?: string;
+   @Field({ nullable: true })
+   @IsOptional()
+   @IsString()
+   hoaContactInfo?: string;
+
+   @Field(() => Date, { nullable: true })
+   @IsOptional()
+   @Type(() => Date)
+   expiryDate?: Date;
 }

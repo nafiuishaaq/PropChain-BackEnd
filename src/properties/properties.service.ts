@@ -240,21 +240,20 @@ export class PropertiesService {
       }
     }
 
-    const updated = await this.prisma.property.update({
-      where: { id },
-      data: {
-        ...rest,
-        price: price ? new Decimal(price.toString()) : undefined,
-        squareFeet: squareFeet ? new Decimal(squareFeet.toString()) : undefined,
-        lotSize: lotSize ? new Decimal(lotSize.toString()) : undefined,
-        hoaMonthlyFee:
-          hoaMonthlyFee !== undefined ? new Decimal(hoaMonthlyFee.toString()) : undefined,
-        latitude: resolvedLat,
-        longitude: resolvedLng,
-      },
-    });
-    await this.cacheService.invalidateByTag(CACHE_TAGS.PROPERTIES);
-    return updated;
+    return this.prisma.property.update({
+       where: { id },
+       data: {
+         ...rest,
+         price: price ? new Decimal(price.toString()) : undefined,
+         squareFeet: squareFeet ? new Decimal(squareFeet.toString()) : undefined,
+         lotSize: lotSize ? new Decimal(lotSize.toString()) : undefined,
+         hoaMonthlyFee:
+           hoaMonthlyFee !== undefined ? new Decimal(hoaMonthlyFee.toString()) : undefined,
+         latitude: resolvedLat,
+         longitude: resolvedLng,
+         expiryDate: updatePropertyDto.expiryDate,
+       },
+     });
   }
 
   async remove(id: string) {
@@ -265,12 +264,40 @@ export class PropertiesService {
     return deleted;
   }
 
-  async findByOwnerId(ownerId: string) {
-    return this.prisma.property.findMany({
-      where: { ownerId },
-      orderBy: { createdAt: 'desc' },
-    });
-  }
+   async findByOwnerId(ownerId: string) {
+     return this.prisma.property.findMany({
+       where: { ownerId },
+       orderBy: { createdAt: 'desc' },
+     });
+   }
+
+   /**
+    * Expire properties that have passed their expiry date.
+    * This method should be called periodically by a scheduled job.
+    */
+   async expireProperties(): Promise<{ updatedCount: number }> {
+     const now = new Date();
+     const result = await this.prisma.property.updateMany({
+       where: {
+         expiryDate: {
+           lt: now, // Less than now (expired)
+         },
+         status: {
+           notIn: [
+             PropertyStatus.SOLD,
+             PropertyStatus.RENTED,
+             PropertyStatus.ARCHIVED,
+             PropertyStatus.EXPIRED, // Already expired
+           ],
+         },
+       },
+       data: {
+         status: PropertyStatus.EXPIRED,
+       },
+     });
+
+     return { updatedCount: result.count };
+   }
 
   /**
    * Transition a property's status according to the workflow state machine.

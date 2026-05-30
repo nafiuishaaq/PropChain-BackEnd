@@ -105,10 +105,19 @@ export class SearchPropertiesDto {
   @Min(0)
   maxBathrooms?: number;
 
-  // ----- Status -----
-  @IsOptional()
-  @IsIn(PROPERTY_STATUS_ENUM)
-  status?: (typeof PROPERTY_STATUS_ENUM)[number];
+   // ----- Status -----
+   @IsOptional()
+   @IsIn(PROPERTY_STATUS_ENUM)
+   status?: (typeof PROPERTY_STATUS_ENUM)[number];
+
+   // ----- Expiry date -----
+   @IsOptional()
+   @Type(() => Date)
+   minExpiryDate?: Date;
+
+   @IsOptional()
+   @Type(() => Date)
+   maxExpiryDate?: Date;
 
   // ----- Pagination -----
   @IsOptional()

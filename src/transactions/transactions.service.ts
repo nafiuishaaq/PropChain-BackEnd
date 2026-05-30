@@ -3,6 +3,11 @@ import { PrismaService } from '../database/prisma.service';
 import { BlockchainService } from '../blockchain/blockchain.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { CommissionsService } from '../commissions/commissions.service';
+import { TransactionFeesService } from './transaction-fees.service';
+import { TimelineService } from './timeline.service';
+import { TransactionAuditService } from './transaction-audit.service';
+import { canTransitionTransactionStatus } from './transaction-status.constants';
+import { TransactionStatus } from '../types/prisma.types';
 import {
   CreateTransactionDto,
   UpdateTransactionDto,
@@ -25,6 +30,9 @@ export class TransactionsService {
     private blockchainService: BlockchainService,
     private notificationsService: NotificationsService,
     private commissionsService: CommissionsService,
+    private transactionFeesService: TransactionFeesService,
+    private timelineService: TimelineService,
+    private transactionAuditService: TransactionAuditService,
   ) {}
 
   /**
@@ -49,6 +57,8 @@ export class TransactionsService {
         throw new NotFoundException('Seller not found');
       }
 
+      const feeBreakdown = this.transactionFeesService.calculateFees(Number(dto.amount));
+
       const transaction = await this.prisma.transaction.create({
         data: {
           propertyId: dto.propertyId,
@@ -58,6 +68,7 @@ export class TransactionsService {
           type: dto.type as any,
           status: 'PENDING',
           notes: dto.notes,
+          feeBreakdown: feeBreakdown as any,
         },
       });
 
@@ -375,10 +386,12 @@ export class TransactionsService {
         throw new NotFoundException('Transaction not found');
       }
 
-      // Validate status transition: COMPLETED/CANCELLED are terminal
-      if (transaction.status === 'COMPLETED' || transaction.status === 'CANCELLED') {
+      // Enforce status lifecycle (#557)
+      const currentStatus = transaction.status as TransactionStatus;
+      const nextStatus = status as TransactionStatus;
+      if (!canTransitionTransactionStatus(currentStatus, nextStatus)) {
         throw new BadRequestException(
-          `Cannot change status from terminal state "${transaction.status}"`,
+          `Invalid status transition from "${currentStatus}" to "${nextStatus}"`,
         );
       }
 
@@ -387,7 +400,19 @@ export class TransactionsService {
         data: { status: status as any },
       });
 
+      // Audit log the transition (#557)
+      await this.transactionAuditService.log(
+        transactionId,
+        'STATUS_TRANSITION',
+        { status: currentStatus },
+        { status: nextStatus },
+        { actorId },
+      );
+
       await this.commissionsService.updateCommissionsStatus(transactionId, status);
+
+      // Auto-create timeline stage event (#560)
+      await this.timelineService.addStageEvent(transactionId, status);
 
       this.logger.log(`Transaction ${transactionId} status updated to ${status}`);
       return this.toResponseDto(updated);
@@ -530,6 +555,36 @@ export class TransactionsService {
   /**
    * Convert transaction to response DTO
    */
+  async updateEscrow(transactionId: string, dto: any, actorId?: string) {
+    const transaction = await this.prisma.transaction.findUnique({
+      where: { id: transactionId },
+    });
+    if (!transaction) throw new NotFoundException('Transaction not found');
+
+    const data: any = {};
+    if (dto.escrowStatus !== undefined) data.escrowStatus = dto.escrowStatus;
+    if (dto.escrowAmount !== undefined) data.escrowAmount = dto.escrowAmount;
+    if (dto.paymentStatus !== undefined) data.paymentStatus = dto.paymentStatus;
+    if (dto.escrowStatus === 'RELEASED') data.escrowReleasedAt = new Date();
+
+    const updated = await this.prisma.transaction.update({
+      where: { id: transactionId },
+      data,
+    });
+
+    if (dto.escrowStatus === 'RELEASED' || dto.paymentStatus === 'COMPLETE') {
+      await this.notificationsService.sendNotification(
+        transaction.buyerId,
+        'Payment Milestone Update',
+        `Escrow/payment milestone reached for transaction ${transactionId}`,
+        'TRANSACTION_UPDATE',
+        { transactionId, escrowStatus: dto.escrowStatus, paymentStatus: dto.paymentStatus },
+      );
+    }
+
+    return this.toResponseDto(updated);
+  }
+
   private toResponseDto(transaction: any): TransactionResponseDto {
     return {
       id: transaction.id,
@@ -542,6 +597,10 @@ export class TransactionsService {
       blockchainHash: transaction.blockchainHash,
       contractAddress: transaction.contractAddress,
       notes: transaction.notes,
+      feeBreakdown: transaction.feeBreakdown ?? undefined,
+      escrowStatus: transaction.escrowStatus ?? undefined,
+      escrowAmount: transaction.escrowAmount ?? undefined,
+      paymentStatus: transaction.paymentStatus ?? undefined,
       createdAt: transaction.createdAt,
       updatedAt: transaction.updatedAt,
     };

@@ -83,6 +83,17 @@ export class CreatePropertyDto {
   @IsString({ each: true })
   features?: string[];
 
+  @Field({ nullable: true })
+  @IsOptional()
+  @IsString()
+  category?: string;
+
+  @Field(() => [String], { nullable: true })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  tags?: string[];
+
   @Field(() => Float, { nullable: true })
   @IsOptional()
   @IsNumber()
@@ -218,6 +229,17 @@ export class UpdatePropertyDto {
    @IsOptional()
    @Type(() => Date)
    expiryDate?: Date;
+
+  @Field({ nullable: true })
+  @IsOptional()
+  @IsString()
+  category?: string;
+
+  @Field(() => [String], { nullable: true })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  tags?: string[];
 
   @Field(() => Float, { nullable: true })
   @IsOptional()

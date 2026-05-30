@@ -11,6 +11,7 @@ import { AuthModule } from '../auth/auth.module';
 import { PropertiesResolver } from './properties.resolver';
 import { PubSub } from 'graphql-subscriptions';
 import { FraudModule } from '../fraud/fraud.module';
+import { PropertyReportService } from './report/property-report.service';
 
 @Module({
   imports: [PrismaModule, AuthModule, FraudModule, ConfigModule],
@@ -20,12 +21,12 @@ import { FraudModule } from '../fraud/fraud.module';
     PropertyImagesService,
     GeocodingService,
     PropertiesResolver,
-    PropertyExpiryService,
+    PropertyReportService,
     {
       provide: 'PUB_SUB',
       useValue: new PubSub(),
     },
   ],
-  exports: [PropertiesService, PropertyImagesService, GeocodingService, PropertyExpiryService],
+  exports: [PropertiesService, PropertyReportService, PropertyImagesService, GeocodingService],
 })
 export class PropertiesModule {}

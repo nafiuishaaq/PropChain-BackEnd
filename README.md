@@ -150,6 +150,8 @@ npm run test:cov
 npm run test:watch
 ```
 
+For database-backed integration tests, set `TEST_DATABASE_URL` to a dedicated test database. Helper utilities are available in `test/database/prisma-test-helpers.ts` to clean fixtures and reset seeded state between suites.
+
 ## 📁 Project Structure
 
 ```

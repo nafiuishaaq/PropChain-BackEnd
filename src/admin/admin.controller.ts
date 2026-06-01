@@ -9,7 +9,8 @@ import {
   Query,
   Res,
   UseGuards,
-  UseInterceptors,
+  HttpException,
+  HttpStatus,
 } from '@nestjs/common';
 import { Response } from 'express';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
@@ -19,7 +20,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { AuthUserPayload } from '../auth/types/auth-user.type';
 import { UserRole } from '../types/prisma.types';
 import { AdminService } from './admin.service';
-import { AdminAuditInterceptor } from './admin-audit.interceptor';
+import { EmailService } from '../email/email.service';
 import {
   AddFraudInvestigationNoteDto,
   AdminUpdateUserDto,
@@ -40,7 +41,10 @@ import { RestoreBackupDto, UpdateBackupScheduleDto } from '../backup/dto/backup.
 @Roles(UserRole.ADMIN)
 @UseInterceptors(AdminAuditInterceptor)
 export class AdminController {
-  constructor(private readonly adminService: AdminService) {}
+  constructor(
+    private readonly adminService: AdminService,
+    private readonly emailService: EmailService,
+  ) {}
 
   @Get('dashboard')
   getDashboard() {
@@ -201,5 +205,67 @@ export class AdminController {
   @Post('fraud/properties/:id/scan')
   scanPropertyForFraud(@Param('id') propertyId: string, @CurrentUser() user: AuthUserPayload) {
     return this.adminService.scanPropertyForFraud(propertyId, user.sub);
+  }
+
+  @Get('email/preview/:templateName')
+  async previewEmailTemplate(@Param('templateName') templateName: string) {
+    const sampleDataMap: Record<string, any> = {
+      'password-reset': {
+        resetUrl: 'http://localhost:3000/reset-password?token=sample-token-123',
+      },
+      'account-locked': {
+        lockoutDuration: 30,
+      },
+      'fraud-alert': {
+        alertId: 'fraud-alert-123',
+        pattern: 'EXCESSIVE_FAILED_LOGINS',
+        severity: 'HIGH',
+        userEmail: 'user@example.com',
+        description: 'The account recorded 10 failed login attempts in the last 30 minutes.',
+      },
+      'transaction-status-pending': {
+        transactionId: 'txn-123',
+        propertyTitle: 'Modern Downtown Apartment',
+        propertyAddress: '123 Main St, New York, NY 10001',
+        buyerName: 'John Doe',
+        sellerName: 'Jane Smith',
+        amount: '$500,000',
+        status: 'PENDING',
+      },
+      'transaction-status-completed': {
+        transactionId: 'txn-123',
+        propertyTitle: 'Modern Downtown Apartment',
+        propertyAddress: '123 Main St, New York, NY 10001',
+        buyerName: 'John Doe',
+        sellerName: 'Jane Smith',
+        amount: '$500,000',
+        completionDate: 'January 15, 2026',
+        blockchainTxHash: '0xabc123...xyz789',
+      },
+      'transaction-status-cancelled': {
+        transactionId: 'txn-123',
+        propertyTitle: 'Modern Downtown Apartment',
+        propertyAddress: '123 Main St, New York, NY 10001',
+        buyerName: 'John Doe',
+        sellerName: 'Jane Smith',
+        amount: '$500,000',
+        cancellationReason: 'Mutual agreement between parties',
+        cancelledDate: 'January 10, 2026',
+      },
+    };
+
+    const sampleData = sampleDataMap[templateName];
+    if (!sampleData) {
+      throw new HttpException(
+        `Template '${templateName}' not found. Available templates: ${Object.keys(sampleDataMap).join(', ')}`,
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    return {
+      templateName,
+      sampleData,
+      note: 'This is a preview with sample data. Actual emails will use real data.',
+    };
   }
 }

@@ -666,13 +666,12 @@ export class FraudService {
     const now = new Date();
 
     if (existingAlert) {
+      const severityIncreased =
+        this.severityRank(payload.severity) > this.severityRank(existingAlert.severity);
       const updated = await this.prisma.fraudAlert.update({
         where: { id: existingAlert.id },
         data: {
-          severity:
-            this.severityRank(payload.severity) > this.severityRank(existingAlert.severity)
-              ? payload.severity
-              : existingAlert.severity,
+          severity: severityIncreased ? payload.severity : existingAlert.severity,
           score: Math.max(existingAlert.score, payload.score),
           title: payload.title,
           description: payload.description,
@@ -684,6 +683,12 @@ export class FraudService {
           autoBlocked: existingAlert.autoBlocked || Boolean(payload.autoBlockUser),
         },
       });
+
+      // Send notification only if severity increased or occurrence count is a multiple of 5
+      // This prevents spamming admins with repeated low-severity alerts
+      if (severityIncreased || updated.occurrenceCount % 5 === 0) {
+        await this.notifySecurityTeam(updated, true);
+      }
 
       if (
         payload.autoBlockUser &&
@@ -746,7 +751,7 @@ export class FraudService {
       });
     }
 
-    await this.notifySecurityTeam(created);
+    await this.notifySecurityTeam(created, false);
 
     if (payload.autoBlockUser && payload.userId) {
       await this.blockUserForFraud(
@@ -920,18 +925,24 @@ export class FraudService {
     });
   }
 
-  private async notifySecurityTeam(alert: any) {
+  private async notifySecurityTeam(alert: any, isUpdate: boolean = false) {
     if (this.fraudAlertRecipients.length === 0) {
       return;
     }
 
     try {
+      const title = isUpdate
+        ? `[Fraud Alert Update][${alert.severity}] ${alert.title} (Occurrence #${alert.occurrenceCount})`
+        : `[Fraud Alert][${alert.severity}] ${alert.title}`;
+
       await this.emailService.sendFraudAlertEmail(this.fraudAlertRecipients, {
         alertId: alert.id,
         pattern: alert.pattern,
         severity: alert.severity,
-        title: alert.title,
-        description: alert.description,
+        title,
+        description: isUpdate
+          ? `${alert.description} This alert has been updated due to recurring activity.`
+          : alert.description,
         userEmail: alert.user?.email,
       });
     } catch (error) {

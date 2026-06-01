@@ -195,6 +195,7 @@ prisma/
 
 - **Properties module:** [src/properties/README.md](src/properties/README.md#L1)
 - **Transactions module:** [src/transactions/README.md](src/transactions/README.md#L1)
+- **Auth & Users:** [docs/Auth_and_User_APIs.md](docs/Auth_and_User_APIs.md#L1)
 
 ## 🔐 Environment Variables
 

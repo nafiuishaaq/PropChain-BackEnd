@@ -26,6 +26,19 @@ export interface FraudAlertEmailPayload {
   userEmail?: string | null;
 }
 
+export interface TransactionStatusPayload {
+  transactionId: string;
+  propertyTitle: string;
+  propertyAddress: string;
+  buyerName: string;
+  sellerName: string;
+  amount: string;
+  completionDate?: string;
+  blockchainTxHash?: string;
+  cancellationReason?: string;
+  cancelledDate?: string;
+}
+
 @Injectable()
 export class EmailService {
   private readonly logger = new Logger(EmailService.name);
@@ -77,6 +90,32 @@ export class EmailService {
         }),
       ),
     );
+  }
+
+  async sendTransactionStatusEmail(
+    email: string,
+    status: string,
+    payload: TransactionStatusPayload,
+  ): Promise<void> {
+    const templateMap: Record<string, string> = {
+      PENDING: 'transaction-status-pending',
+      COMPLETED: 'transaction-status-completed',
+      CANCELLED: 'transaction-status-cancelled',
+    };
+
+    const template = templateMap[status];
+    if (!template) {
+      this.logger.warn(`No template found for transaction status: ${status}`);
+      return;
+    }
+
+    await this.sendEmail({
+      to: email,
+      subject: `[PropChain] Transaction ${status}`,
+      template,
+      context: payload,
+      text: `Your transaction status has been updated to ${status}. Transaction ID: ${payload.transactionId}`,
+    });
   }
 
   async handleBounce(

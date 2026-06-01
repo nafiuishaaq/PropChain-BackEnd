@@ -249,6 +249,9 @@ Tax strategy suggestions are informational only and are not legal or tax advice.
 
 ## 🤝 Contributing
 
+See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines, branch naming conventions, PR expectations, and local test/lint instructions.
+
+
 1. Fork the repository
 2. Create your feature branch (`git checkout -b feature/amazing-feature`)
 3. Commit your changes (`git commit -m 'Add amazing feature'`)

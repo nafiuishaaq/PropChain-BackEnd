@@ -90,4 +90,7 @@ export class Property {
 
   @Field()
   updatedAt: Date;
+
+  @Field({ nullable: true })
+  expiryDate?: Date;
 }

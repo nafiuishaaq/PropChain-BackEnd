@@ -39,6 +39,7 @@ import { RestoreBackupDto, UpdateBackupScheduleDto } from '../backup/dto/backup.
 @Controller('admin')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(UserRole.ADMIN)
+@UseInterceptors(AdminAuditInterceptor)
 export class AdminController {
   constructor(
     private readonly adminService: AdminService,

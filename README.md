@@ -191,6 +191,11 @@ prisma/
 - **Transaction** - Property transactions with blockchain integration
 - **Document** - Property-related documents and files
 
+## Module Docs
+
+- **Properties module:** [src/properties/README.md](src/properties/README.md#L1)
+- **Transactions module:** [src/transactions/README.md](src/transactions/README.md#L1)
+
 ## 🔐 Environment Variables
 
 Create a `.env` file based on `.env.example`:

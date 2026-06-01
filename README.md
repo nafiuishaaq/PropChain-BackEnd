@@ -262,3 +262,24 @@ This project is licensed under the MIT License.
 ## 👥 Support
 
 For support, email support@propchain.com or join our Slack channel
+
+## Developer Requirements — TypeScript & Linting
+
+- **TypeScript strict mode:** The project now enables `strict` TypeScript checks. The base config is in [tsconfig.json](tsconfig.json#L1).
+- **Key compiler flags enforced:** `noImplicitAny`, `strictNullChecks` and related strict checks are enabled for app builds via [tsconfig.app.json](tsconfig.app.json#L1).
+- **ESLint rules:** `@typescript-eslint/no-explicit-any` is set to `error` and explicit boundary/return types are encouraged via `@typescript-eslint/explicit-module-boundary-types` and `@typescript-eslint/explicit-function-return-type` (set to `warn`). See [.eslintrc.js](.eslintrc.js#L1).
+
+Local checks before committing/pushing:
+
+```bash
+# Install
+npm ci
+
+# Run linter (auto-fixable issues)
+npm run lint
+
+# Build to verify TypeScript strict checks
+npm run build
+```
+
+CI: A GitHub Actions workflow (`.github/workflows/ci.yml`) now runs `npm run lint` and `npm run build` on pushes and PRs to `main` to validate the stricter compilation and linting rules.

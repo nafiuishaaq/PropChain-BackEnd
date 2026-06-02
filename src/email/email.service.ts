@@ -142,6 +142,15 @@ export class EmailService {
         where: { id: user.id },
         data: { emailStatus: 'INVALID' },
       });
+
+      await this.prisma.userPreferences.upsert({
+        where: { userId: user.id },
+        update: { emailNotifications: false },
+        create: {
+          userId: user.id,
+          emailNotifications: false,
+        },
+      });
     } else {
       await this.prisma.user.update({
         where: { id: user.id },

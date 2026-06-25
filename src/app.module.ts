@@ -34,6 +34,7 @@ import { PropertyComparisonModule } from './property-comparison/property-compari
 import { OpenHouseModule } from './open-house/open-house.module';
 import { MortgageCalculatorModule } from './mortgage-calculator/mortgage-calculator.module';
 import { SupportTicketsModule } from './support-tickets/support-tickets.module';
+import { AuditModule } from './audit/audit.module';
 
 @Module({
   imports: [
@@ -80,6 +81,7 @@ import { SupportTicketsModule } from './support-tickets/support-tickets.module';
     OpenHouseModule,
     MortgageCalculatorModule,
     SupportTicketsModule,
+    AuditModule,
   ],
 
   controllers: [AppController],

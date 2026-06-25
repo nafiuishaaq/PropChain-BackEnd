@@ -1273,3 +1273,17 @@ model OpenHouseRsvp {
   @@index([userId])
   @@map("open_house_rsvps")
 }
+
+model ExportJob {
+  id        String    @id @default(uuid())
+  type      JobType
+  status    JobStatus @default(PENDING)
+  fileUrl   String?   @map("file_url")
+  startedAt DateTime  @default(now()) @map("started_at")
+  completedAt DateTime? @map("completed_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  @@index([type, status])
+  @@map("export_jobs")
+}

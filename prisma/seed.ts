@@ -183,7 +183,6 @@ async function main() {
     data: {
       email: 'seller@example.com',
       walletAddress: '0x4567890123456789012345678901234567890123',
-      role: UserRole.SELLER,
       roleId: userRole.id,
     },
   });
